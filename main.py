@@ -17,7 +17,6 @@ def init_db():
 # --- States ---
 NAME, AGE, BIO, PHOTO = range(4)
 
-# Registration Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Welcome to TgTinder! 🔥\nWhat is your Name?")
     return NAME
@@ -40,25 +39,21 @@ async def get_bio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_id = update.message.photo[-1].file_id
     user_id = update.effective_user.id
-    
     conn = sqlite3.connect('dating_bot.db')
     cursor = conn.cursor()
     cursor.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?, ?)",
                    (user_id, context.user_data['name'], context.user_data['age'], context.user_data['bio'], photo_id))
     conn.commit()
     conn.close()
-
     await update.message.reply_text("Profile saved! Use /discovery to find people.")
     return ConversationHandler.END
 
-# Discovery Logic
 async def discovery(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn = sqlite3.connect('dating_bot.db')
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE user_id != ? ORDER BY RANDOM() LIMIT 1", (update.effective_user.id,))
     target = cursor.fetchone()
     conn.close()
-
     if target:
         uid, name, age, bio, photo = target
         keyboard = [[InlineKeyboardButton("❤️ Like", callback_data=f"like_{uid}"),
@@ -67,11 +62,15 @@ async def discovery(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("No more profiles yet!")
 
-# Main Function
 def main():
     init_db()
-    # Yahan apna Token daalein (Ya use karein environment variable)
-    TOKEN = "YOUR_TELEGRAM_BOT_TOKEN" 
+    # Yahan hum Render se token uthayenge
+    TOKEN = os.getenv("BOT_TOKEN") 
+    
+    if not TOKEN:
+        print("Error: BOT_TOKEN environment variable not found!")
+        return
+
     app = Application.builder().token(TOKEN).build()
 
     conv = ConversationHandler(
@@ -87,8 +86,9 @@ def main():
 
     app.add_handler(conv)
     app.add_handler(CommandHandler('discovery', discovery))
+    print("Bot is starting...")
     app.run_polling()
 
 if __name__ == '__main__':
     main()
-  
+    
