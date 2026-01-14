@@ -1,0 +1,4 @@
+# Ignore sensitive files
+.env
+dating_bot.db
+__pycache__/
